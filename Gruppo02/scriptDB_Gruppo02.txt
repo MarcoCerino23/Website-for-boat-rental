@@ -1,0 +1,162 @@
+DROP TABLE IF EXISTS utente CASCADE;
+DROP TABLE IF EXISTS proprietario CASCADE;
+DROP TABLE IF EXISTS recensione CASCADE;
+DROP TABLE IF EXISTS barca CASCADE;
+DROP TABLE IF EXISTS possiede CASCADE;
+
+CREATE TABLE utente (
+  email VARCHAR(50) PRIMARY KEY,
+  nome VARCHAR(50) NOT NULL,
+  cognome VARCHAR(50) NOT NULL,
+  num_tel VARCHAR(10)
+);
+
+CREATE TABLE proprietario(
+	password VARCHAR(255) NOT NULL,
+	nome VARCHAR(30) NOT NULL,
+	cognome VARCHAR(30) NOT NULL,
+	data_nascita DATE NOT NULL,
+	email VARCHAR(50) PRIMARY KEY,
+	num_tel VARCHAR(10) NOT NULL
+	
+);
+
+CREATE TABLE recensione(
+	codice INTEGER PRIMARY KEY,
+	descrizione varchar(1000),
+	num_stelle INTEGER NOT NULL,
+	barca INTEGER NOT NULL ,/*reference*/
+	utente  VARCHAR(50) NOT NULL /*references utente(email) on update cascade on delete cascade*/
+	
+);
+
+CREATE  TABLE barca(
+	nome VARCHAR(50),
+	tipologia VARCHAR(30) NOT NULL,
+	descrizione VARCHAR(300),
+	costo decimal,
+	disponibilita boolean,
+	codice INTEGER PRIMARY KEY, /*fare vincolo*/
+	utente VARCHAR(50) references utente(email) on update cascade on delete cascade,
+	immagine varchar(200),
+	immagine2 varchar(200),
+	immagine3 varchar(200),
+	valutazione decimal(10,2),
+	lunghezza numeric(4,2),
+	posti integer
+);
+
+
+CREATE TABLE possiede(
+	barca INTEGER PRIMARY KEY references barca(codice) on update cascade on delete cascade,
+	proprietario VARCHAR(50) NOT NULL 
+);
+
+
+
+CREATE OR REPLACE FUNCTION update_valutazione() RETURNS TRIGGER AS $$
+
+  DECLARE
+  average decimal(10,2);
+ BEGIN
+    -- Controlla se il media associato al post non è un "sondaggio"
+    SELECT AVG(num_stelle) INTO average
+    FROM recensione
+    WHERE barca = NEW.barca;
+	
+	UPDATE barca
+    SET valutazione = average
+    WHERE codice = NEW.barca;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER update_valutazione
+AFTER INSERT OR UPDATE ON recensione
+FOR EACH ROW
+EXECUTE FUNCTION update_valutazione();
+
+
+
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO www;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO www;
+
+-- Inserimenti per la tabella "utente"
+INSERT INTO utente (email, nome, cognome, num_tel) VALUES
+  ('mario.rossi@gmail.com', 'Mario', 'Rossi', '3801370622'),
+  ('laura.verdi@live.com', 'Laura', 'Verdi', '3405955120'),
+  ('giovanni.bianchi@gmail.com', 'Giovanni', 'Bianchi', '3395954121'),
+  ('sara.neri@libero.com', 'Sara', 'Neri', '3451200621'),
+  ('paola.gialli@live.com', 'Paola', 'Gialli', '3801450954'),
+  ('franco.rossi@gmail.com', 'Franco', 'Rossi', '3491370621'),
+  ('anna.bianchi@gmail.com', 'Anna', 'Bianchi', '3281370621'),
+  ('luca.verdi@gmail.com', 'Luca', 'Verdi', NULL),
+  ('elisa.neri@gmail.com', 'Elisa', 'Neri', '3661370621'),
+  ('giuseppe.gialli@gmail.com', 'Giuseppe', 'Gialli', '3295954120');
+
+
+-- Inserimenti per la tabella "proprietario"
+INSERT INTO proprietario (password, nome, cognome, data_nascita, email, num_tel) VALUES
+  ('password1', 'Luca', 'Russo', '1990-01-01', 'luca.russo@example.com', '3405956876'),
+  ('password2', 'Anna', 'Ferrari', '1985-05-10', 'anna.ferrari@example.com', '3334567890'),
+  ('password3', 'Marco', 'Bianchi', '1992-07-15', 'marco.bianchi@example.com', '3246754329'),
+  ('password4', 'Giulia', 'Verdi', '1988-09-20', 'giulia.verdi@example.com', '3347865445'),
+  ('password5', 'Linda', 'Neri', '1995-03-25', 'linda.neri@example.com', '3337687000'),
+  ('password6', 'Francesco', 'Rossi', '1991-02-12', 'francesco.rossi@example.com', '3334567890'),
+  ('password7', 'Martina', 'Bianchi', '1987-06-05', 'martina.bianchi@example.com', '3804579044'),
+  ('password8', 'Simone', 'Verdi', '1993-08-18', 'simone.verdi@example.com', '3801234567'),
+  ('password9', 'Valentina', 'Gialli', '1989-10-23', 'valentina.gialli@example.com', '3409876333'),
+  ('password10', 'Alessio', 'Neri', '1996-04-28', 'alessio.neri@example.com', '3291370644');
+
+
+
+-- Inserimenti per la tabella "barca"
+
+INSERT INTO barca (nome, tipologia, descrizione, costo, disponibilita, codice, utente, immagine, immagine2, immagine3, valutazione,lunghezza,posti) VALUES
+  ('Barca 1', 'Vela', 'Barca a vela di lusso', 500.00, true, 1, 'mario.rossi@gmail.com', 'barcavela1.jpg', 'barcavela2.jpg', 'barcavela3.jpg', 2,6,3),
+  ('Barca 2', 'Motore', 'Barca motore per escursioni', 350.00, true, 2, 'laura.verdi@live.com', 'motore1.jpg', 'motore2.jpg', 'motore3.jpg', 2,7.5,4),
+  ('Barca 3', 'Catamarano', 'Catamarano per divertimento in mare', 200.00, false, 3, 'giovanni.bianchi@gmail.com', 'catamarano5.jpg', 'catamarano4.jpg', 'catamarano6.jpg', 2,8,4),
+  ('Barca 4', 'Yacht', 'Yacht confortevole!', 600.00, true, 4, 'sara.neri@libero.com', 'yatch2.jpg', 'yatch1.jpg', 'yatch3.jpg', 2,15,7),
+  ('Barca 5', 'Motore', 'Barca motore per pesca sportiva', 400.00, true, 5, 'paola.gialli@live.com', 'motore4.jpg', 'motore5.jpg', 'motore6.jpg', 2,9,6),
+  ('Barca 6', 'Motore', 'Barca motore per pesca sportiva', 400.00, true, 6, 'paola.gialli@live.com', 'motore7.jpg', 'motore8.jpg', 'motore9.jpg', 2,8.5,3),
+  ('Barca 7', 'Vela', 'Barca a vela di lusso', 500.00, true, 7, 'mario.rossi@gmail.com', 'barcavela4.jpg', 'barcavela5.jpg', 'barcavela6.jpg', 2,7,3),
+  ('Barca 8', 'Motore', 'Barca motore per escursioni', 350.00, true, 8, 'laura.verdi@live.com', 'motore10.jpg', 'motore11.jpg', 'motore11.jpg', 2,8.9,2),
+  ('Barca 9', 'Catamarano', 'Catamarano per divertimento in mare', 200.00, false, 9, 'giovanni.bianchi@gmail.com', 'catamarano4.jpg', 'catamarano5.jpg', 'catamarano6.jpg', 2,17,8),
+  ('Barca 10', 'Yacht', 'Yacht molto grande', 600.00, true, 10, 'sara.neri@libero.com', 'yatch4.jpg', 'yatch5.jpg', 'yatch6.jpg', 2,19.2,7);
+
+  
+ -- Inserimenti per la tabella "recensione"
+INSERT INTO recensione (codice, descrizione, num_stelle, barca, utente) VALUES
+  (1, 'Ottima barca, esperienza fantastica!', 5, 1, 'mario.rossi@gmail.com'),
+  (2, 'Barca confortevole, personale gentile.', 4, 2, 'laura.verdi@live.com'),
+  (3, 'Non consigliata, problemi tecnici.', 2, 3, 'giovanni.bianchi@gmail.com'),
+  (4, 'Esperienza unica, consigliatissima!', 5, 4, 'sara.neri@libero.com'),
+  (5, 'Buon rapporto qualità-prezzo.', 3, 5, 'paola.gialli@live.com'),
+  (6, 'Ottima barca, esperienza fantastica!', 5, 1, 'mario.rossi@gmail.com'),
+  (7, 'Barca confortevole, personale gentile.', 4, 2, 'laura.verdi@live.com'),
+  (8, 'Non consigliata, problemi tecnici.', 2, 3, 'giovanni.bianchi@gmail.com'),
+  (9, 'Esperienza unica, consigliatissima!', 5, 4, 'sara.neri@libero.com'),
+  (10, 'Buon rapporto qualità-prezzo.', 3, 5, 'paola.gialli@live.com');
+
+ 
+ -- VEDERE SE LASCIARE 
+  INSERT INTO recensione (codice, descrizione, num_stelle, barca, utente) VALUES
+  (11, 'Ottima barca, esperienza fantastica!', 5, 1, 'email1@example.com'),
+  (12, 'Ottima barca, esperienza fantastica!', 2, 1, 'email2@example.com'),
+  (13, 'Ottima barca, esperienza fantastica!', 5, 3, 'email3@example.com');
+  
+
+-- Inserimenti per la tabella "possiede"
+INSERT INTO possiede (proprietario, barca) VALUES
+  ('luca.russo@example.com', 1),
+  ('anna.ferrari@example.com', 2),
+  ('marco.bianchi@example.com', 3),
+  ('giulia.verdi@example.com', 4),
+  ('linda.neri@example.com', 5),
+  ('francesco.rossi@example.com', 6),
+  ('martina.bianchi@example.com', 7),
+  ('simone.verdi@example.com', 8),
+  ('valentina.gialli@example.com', 9),
+  ('alessio.neri@example.com', 10);
